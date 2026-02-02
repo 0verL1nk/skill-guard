@@ -77,6 +77,7 @@ openclaw gateway restart
 - [x] **Identity System**: Support `did:web` for automatic key resolution
 - [x] **OpenClaw Integration**: Native middleware to auto-verify skills
 - [ ] **Key Rotation**: Update keys without breaking trust chains
+- [ ] **Directory Integrity**: Verify all files in a skill folder (scripts/, assets/), not just SKILL.md.
 - [ ] **Registry**: Decentralized lookup for Public Keys
 
 ## 📄 License
