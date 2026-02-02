@@ -1,6 +1,6 @@
 {
   "name": "@overlink/sg-openclaw-hook",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenClaw hook for verifying skills with SkillGuard",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

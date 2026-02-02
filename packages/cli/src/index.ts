@@ -187,4 +187,53 @@ program.command("verify")
     }
   });
 
+program.command("install-hook")
+  .description("Install the OpenClaw SkillGuard Hook automatically")
+  .action(async () => {
+      try {
+          const homeDir = process.env.HOME || process.env.USERPROFILE;
+          if (!homeDir) throw new Error("Could not determine home directory");
+
+          const hooksDir = path.join(homeDir, ".openclaw", "hooks", "skill-guard");
+          await fs.ensureDir(hooksDir);
+
+          console.log("📥 Downloading latest hook from npm...");
+          
+          // Fetch from jsDelivr to avoid local dependency issues
+          // We fetch the individual files we need
+          const baseUrl = "https://cdn.jsdelivr.net/npm/@overlink/sg-openclaw-hook@latest";
+          const files = ["handler.js", "tweetnacl.js"]; // We bundled tweetnacl in the hook package for this reason
+          
+          for (const file of files) {
+              const url = `${baseUrl}/${file}`;
+              const response = await fetch(url);
+              if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+              const text = await response.text();
+              await fs.writeFile(path.join(hooksDir, file), text);
+              console.log(`   - Installed ${file}`);
+          }
+
+          // Create HOOK.md
+          const hookMd = `
+---
+name: skill-guard
+description: Verifies the integrity and signature of skills on startup.
+---
+# SkillGuard Hook
+
+Automatically verifies skills against their manifest.json on startup.
+`;
+          await fs.writeFile(path.join(hooksDir, "HOOK.md"), hookMd.trim());
+          console.log("   - Installed HOOK.md");
+
+          console.log("\n✅ SkillGuard Hook installed successfully!");
+          console.log("🔄 Please restart your OpenClaw Gateway to apply changes:");
+          console.log("   openclaw gateway restart");
+
+      } catch (e: any) {
+          console.error("❌ Installation failed:", e.message);
+          process.exit(1);
+      }
+  });
+
 program.parse();

@@ -17,10 +17,19 @@ exports.SkillManifestSchema = zod_1.z.object({
         publicKey: zod_1.z.string() // Ed25519 Public Key (Base64)
     }),
     permissions: zod_1.z.array(exports.PermissionScope).default([]),
-    integrity: zod_1.z.object({
-        file: zod_1.z.string(), // e.g. "SKILL.md"
-        hash: zod_1.z.string() // sha256-hash
-    }),
+    integrity: zod_1.z.union([
+        // V1: Single File (Legacy/Simple)
+        zod_1.z.object({
+            version: zod_1.z.literal(1).optional(),
+            file: zod_1.z.string(),
+            hash: zod_1.z.string()
+        }),
+        // V2: Directory / Multi-file
+        zod_1.z.object({
+            version: zod_1.z.literal(2),
+            files: zod_1.z.record(zod_1.z.string()) // relative_path -> sha256_hash
+        })
+    ]),
     signature: zod_1.z.object({
         algorithm: zod_1.z.literal("ed25519"),
         value: zod_1.z.string() // Signature of the hash (Base64)

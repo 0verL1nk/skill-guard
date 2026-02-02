@@ -19,16 +19,28 @@ export declare const SkillManifestSchema: z.ZodObject<{
         url?: string | undefined;
     }>;
     permissions: z.ZodDefault<z.ZodArray<z.ZodEnum<["fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"]>, "many">>;
-    integrity: z.ZodObject<{
+    integrity: z.ZodUnion<[z.ZodObject<{
+        version: z.ZodOptional<z.ZodLiteral<1>>;
         file: z.ZodString;
         hash: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         file: string;
         hash: string;
+        version?: 1 | undefined;
     }, {
         file: string;
         hash: string;
-    }>;
+        version?: 1 | undefined;
+    }>, z.ZodObject<{
+        version: z.ZodLiteral<2>;
+        files: z.ZodRecord<z.ZodString, z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        version: 2;
+        files: Record<string, string>;
+    }, {
+        version: 2;
+        files: Record<string, string>;
+    }>]>;
     signature: z.ZodObject<{
         algorithm: z.ZodLiteral<"ed25519">;
         value: z.ZodString;
@@ -52,6 +64,10 @@ export declare const SkillManifestSchema: z.ZodObject<{
     integrity: {
         file: string;
         hash: string;
+        version?: 1 | undefined;
+    } | {
+        version: 2;
+        files: Record<string, string>;
     };
     signature: {
         value: string;
@@ -70,6 +86,10 @@ export declare const SkillManifestSchema: z.ZodObject<{
     integrity: {
         file: string;
         hash: string;
+        version?: 1 | undefined;
+    } | {
+        version: 2;
+        files: Record<string, string>;
     };
     signature: {
         value: string;
