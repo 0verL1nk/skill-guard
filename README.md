@@ -18,12 +18,7 @@ SkillGuard establishes a chain of trust for AI Agent capabilities. It provides a
 
 **Installation**
 ```bash
-git clone https://github.com/0verL1nk/skill-guard.git
-cd skill-guard
-npm install
-npm run build
-# Link the CLI
-npm link --workspace packages/cli
+npm install -g @overlink/sg-cli
 ```
 
 **Workflow**
@@ -44,7 +39,14 @@ sg verify SKILL.md manifest.json
 SkillGuard provides a native hook for OpenClaw that scans your `skills/` directory on startup.
 
 **Installation**
+You can install the hook directly from npm (once OpenClaw supports npm hooks) or manually linking it for now.
+
+**Manual Installation (Current Method):**
 ```bash
+# Clone the repo
+git clone https://github.com/0verL1nk/skill-guard.git
+cd skill-guard
+
 # Copy the hook to your managed hooks directory
 mkdir -p ~/.openclaw/hooks/skill-guard
 cp -r packages/openclaw-hook/handler.js packages/openclaw-hook/HOOK.md packages/openclaw-hook/tweetnacl.js ~/.openclaw/hooks/skill-guard/
@@ -63,10 +65,10 @@ openclaw gateway restart
 
 ## 🏗 Architecture
 
-- **`@skill-guard/protocol`**: Zod schemas for Manifests.
-- **`@skill-guard/core`**: Ed25519 signing & SHA-256 hashing logic.
-- **`@skill-guard/cli`**: The `sg` command-line interface.
-- **`@skill-guard/openclaw-hook`**: Native integration for OpenClaw Gateway.
+- **`@overlink/sg-protocol`**: Zod schemas for Manifests.
+- **`@overlink/sg-core`**: Ed25519 signing & SHA-256 hashing logic.
+- **`@overlink/sg-cli`**: The `sg` command-line interface.
+- **`@overlink/sg-openclaw-hook`**: Native integration for OpenClaw Gateway.
 
 ## 🗺 Roadmap
 
