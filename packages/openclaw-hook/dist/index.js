@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_path_1 = __importDefault(require("node:path"));
 const promises_1 = __importDefault(require("node:fs/promises"));
-const core_1 = require("@skill-guard/core");
+const sg_core_1 = require("@overlink/sg-core");
 const handler = async (event) => {
     // Run on gateway startup to scan initial skills
     if (event.type === 'gateway' && event.action === 'startup') {
@@ -89,7 +89,7 @@ async function checkSkill(skillDir, skillName) {
         const manifestContent = await promises_1.default.readFile(manifestPath, 'utf-8');
         const manifestJson = JSON.parse(manifestContent);
         // Verify
-        const isValid = (0, core_1.verifyManifest)(manifestJson, skillContent);
+        const isValid = (0, sg_core_1.verifyManifest)(manifestJson, skillContent);
         if (isValid) {
             console.log(`[SkillGuard] ✅ Verified skill: "${skillName}"`);
         }

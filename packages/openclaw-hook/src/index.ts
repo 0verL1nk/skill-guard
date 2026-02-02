@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { verifyManifest } from '@skill-guard/core';
+import { verifyManifest } from '@overlink/sg-core';
 
 // Minimal type definition for OpenClaw Hook
 type HookEvent = {

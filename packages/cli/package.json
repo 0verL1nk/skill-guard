@@ -1,5 +1,5 @@
 {
-  "name": "@skill-guard/cli",
+  "name": "@overlink/sg-cli",
   "version": "0.1.0",
   "main": "dist/index.js",
   "bin": {
@@ -9,8 +9,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@skill-guard/core": "*",
-    "@skill-guard/protocol": "*",
+    "@overlink/sg-core": "*",
+    "@overlink/sg-protocol": "*",
     "commander": "^11.0.0",
     "fs-extra": "^11.0.0"
   },

@@ -42,7 +42,7 @@ exports.resolveDID = resolveDID;
 const nacl = __importStar(require("tweetnacl"));
 const naclUtil = __importStar(require("tweetnacl-util"));
 const crypto = __importStar(require("crypto"));
-const protocol_1 = require("@skill-guard/protocol");
+const sg_protocol_1 = require("@overlink/sg-protocol");
 function generateKeyPair() {
     const kp = nacl.sign.keyPair();
     return {
@@ -78,7 +78,7 @@ function signManifest(partialManifest, fileContent, fileName, secretKeyB64) {
 }
 function verifyManifest(manifest, fileContent) {
     // 1. Validate Schema
-    const parseResult = protocol_1.SkillManifestSchema.safeParse(manifest);
+    const parseResult = sg_protocol_1.SkillManifestSchema.safeParse(manifest);
     if (!parseResult.success)
         return false;
     // 2. Verify Integrity (Hash)
@@ -108,13 +108,17 @@ function checkPolicy(manifest, policy) {
     }
     return { allowed: true };
 }
-// Mock DID Resolver (In real life, this fetches HTTPS)
 async function resolveDID(did) {
-    // Mocking a registry for 0verL1nk
-    if (did === "did:web:github.com:0verL1nk") {
-        // Return a hardcoded key for demo purposes
-        // In prod: await fetch(`https://raw.githubusercontent.com/0verL1nk/.well-known/did.json`)
-        return "1ZZgI2N8nG2HvvqIscbXNd4zSxZ4qm7pL7LzakE8Vq4=";
+    console.log(`[Core] Resolving DID: ${did}`);
+    // Mock implementation for MVP
+    if (did.startsWith("did:test:")) {
+        // Return a static key for testing or extract from DID if it was a did:key
+        // For this mock, we'll assume the user provides a DID that maps to the known test key if hardcoded,
+        // or we just return a dummy key. 
+        // BETTER: For the CLI test case, we might need it to actually work.
+        // Let's return null to simulate "not found" unless it matches our test case.
+        return null;
     }
+    // TODO: Implement did:web or did:key resolution
     return null;
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@skill-guard/openclaw-hook",
+  "name": "@overlink/sg-openclaw-hook",
   "version": "0.1.0",
   "description": "OpenClaw hook for verifying skills with SkillGuard",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "dev": "tsc -w"
   },
   "dependencies": {
-    "@skill-guard/core": "*",
+    "@overlink/sg-core": "*",
     "fs-extra": "^11.2.0"
   },
   "devDependencies": {

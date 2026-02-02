@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const nacl = require('./tweetnacl.js');
 const crypto = require('crypto');
 
-// --- Core Logic (bundled from @skill-guard/core) ---
+// --- Core Logic (bundled from @overlink/sg-core) ---
 
 function hashContent(content) {
     return crypto.createHash('sha256').update(content).digest('hex');

@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import * as fs from "fs-extra";
 import * as path from "path";
-import { generateKeyPair, signManifest, verifyManifest, checkPolicy, resolveDID } from "@skill-guard/core";
+import { generateKeyPair, signManifest, verifyManifest, checkPolicy, resolveDID } from "@overlink/sg-core";
 
 const program = new Command();
 

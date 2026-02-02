@@ -1,7 +1,7 @@
 import * as nacl from "tweetnacl";
 import * as naclUtil from "tweetnacl-util";
 import * as crypto from "crypto";
-import { SkillManifest, SkillManifestSchema } from "@skill-guard/protocol";
+import { SkillManifest, SkillManifestSchema } from "@overlink/sg-protocol";
 
 export function generateKeyPair() {
     const kp = nacl.sign.keyPair();
@@ -68,7 +68,7 @@ export function verifyManifest(manifest: SkillManifest, fileContent: string): bo
     return nacl.sign.detached.verify(payloadBytes, signatureBytes, publicKeyBytes);
 }
 
-export function checkPolicy(manifest: SkillManifest, policy: import("@skill-guard/protocol").Policy): { allowed: boolean; reason?: string } {
+export function checkPolicy(manifest: SkillManifest, policy: import("@overlink/sg-protocol").Policy): { allowed: boolean; reason?: string } {
     // 1. Check Trust (Public Key)
     if (!policy.trustedKeys.includes(manifest.author.publicKey)) {
         return { allowed: false, reason: "Author's public key is not trusted by policy." };

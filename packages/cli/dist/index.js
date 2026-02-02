@@ -37,17 +37,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const fs = __importStar(require("fs-extra"));
 const path = __importStar(require("path"));
-const core_1 = require("@skill-guard/core");
+const sg_core_1 = require("@overlink/sg-core");
 const program = new commander_1.Command();
 program
     .name("sg")
     .description("SkillGuard CLI - Secure your Agent Skills")
-    .version("0.1.0");
+    .version("0.3.0");
 program.command("keygen")
     .description("Generate a new Ed25519 keypair")
     .option("-o, --out <dir>", "Output directory", ".")
     .action(async (options) => {
-    const keys = (0, core_1.generateKeyPair)();
+    const keys = (0, sg_core_1.generateKeyPair)();
     await fs.ensureDir(options.out);
     await fs.writeFile(path.join(options.out, "private.key"), keys.secretKey);
     await fs.writeFile(path.join(options.out, "public.key"), keys.publicKey);
@@ -70,7 +70,7 @@ program.command("sign")
         // Let's assume public.key is next to private.key
         const pubKeyPath = options.key.replace("private", "public");
         const publicKey = await fs.readFile(pubKeyPath, "utf-8");
-        const manifest = (0, core_1.signManifest)({
+        const manifest = (0, sg_core_1.signManifest)({
             schemaVersion: "1.0.0",
             name: options.name || path.basename(file),
             version: options.ver,
@@ -90,20 +90,38 @@ program.command("verify")
     .argument("<file>", "Skill file")
     .argument("<manifest>", "Manifest file")
     .option("--policy <file>", "Policy file (JSON) to enforce")
+    .option("--did <did>", "Author's DID to verify against (e.g. did:web:...)")
     .action(async (file, manifestPath, options) => {
     try {
         const content = await fs.readFile(file, "utf-8");
         const manifest = await fs.readJson(manifestPath);
         // 1. Verify Integrity & Signature
-        const valid = (0, core_1.verifyManifest)(manifest, content);
+        const valid = (0, sg_core_1.verifyManifest)(manifest, content);
         if (!valid) {
             console.error("❌ FAILED: Invalid signature or integrity check.");
             process.exit(1);
         }
-        // 2. Verify Policy (if provided)
-        if (options.policy) {
-            const policy = await fs.readJson(options.policy);
-            const policyResult = (0, core_1.checkPolicy)(manifest, policy);
+        // 1.5. Resolve DID (if provided)
+        let policy = options.policy ? await fs.readJson(options.policy) : null;
+        if (options.did) {
+            console.log(`🔍 Resolving DID: ${options.did}...`);
+            const publicKey = await (0, sg_core_1.resolveDID)(options.did);
+            if (!publicKey) {
+                console.error("❌ DID Resolution Failed: Could not find public key.");
+                process.exit(1);
+            }
+            console.log(`✅ Resolved DID to Public Key: ${publicKey}`);
+            // Auto-generate or extend policy
+            if (!policy) {
+                policy = { trustedKeys: [publicKey], enforceVersionMatch: false };
+            }
+            else {
+                policy.trustedKeys.push(publicKey);
+            }
+        }
+        // 2. Verify Policy (if provided or generated from DID)
+        if (policy) {
+            const policyResult = (0, sg_core_1.checkPolicy)(manifest, policy);
             if (!policyResult.allowed) {
                 console.error(`❌ POLICY DENIED: ${policyResult.reason}`);
                 process.exit(1);
