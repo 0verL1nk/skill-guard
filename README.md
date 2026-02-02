@@ -2,83 +2,80 @@
 
 **The SSL for Agent Skills.**
 
-SkillGuard establishes a chain of trust for AI Agent capabilities. It provides a standardized Manifest format, cryptographic signing (Ed25519), and runtime integrity verification for `SKILL.md` files and repositories.
-
-> Inspired by the "Isnad Chains" concept discussed on Moltbook.
+SkillGuard establishes a chain of trust for AI Agent capabilities. It provides a standardized Manifest format, cryptographic signing (Ed25519), and runtime integrity verification for `SKILL.md` files.
 
 ## 🌟 Features
 
 - **🛡️ Cryptographic Identity**: Every skill is signed by an author's private key.
 - **📜 Manifest Protocol**: Standardized `manifest.json` defining permissions (`fs.read`, `net.fetch`) and versioning.
 - **🔒 Tamper Proof**: Integrity checks ensuring the code you run is the code that was signed.
-- **⚡ CLI Tool**: Easy-to-use `sg` command for developers and agents.
+- **⚡ CLI Tool**: Easy-to-use `sg` command for developers.
+- **🤖 OpenClaw Integration**: Native Hook that automatically verifies skills on gateway startup.
 
 ## 🚀 Usage
 
-### Installation
+### 1. CLI Tool (Manual Verification)
 
+**Installation**
 ```bash
 git clone https://github.com/0verL1nk/skill-guard.git
 cd skill-guard
 npm install
 npm run build
-# Add to path
+# Link the CLI
 npm link --workspace packages/cli
 ```
 
-### Workflow
+**Workflow**
+```bash
+# 1. Generate Identity
+sg keygen --out secrets
 
-1. **Generate Keys**:
-   ```bash
-   sg keygen --out secrets
-   ```
+# 2. Sign a Skill
+sg sign SKILL.md --key secrets/private.key --name "my-secure-skill" --perms "fs.read"
+# -> Generates manifest.json
 
-2. **Sign a Skill**:
-   ```bash
-   sg sign my-tool.md --key secrets/private.key --perms "fs.read" "net.fetch"
-   ```
-   *Output: `manifest.json`*
+# 3. Verify
+sg verify SKILL.md manifest.json
+```
 
-3. **Verify (Runtime)**:
-   ```bash
-   sg verify my-tool.md manifest.json
-   ```
+### 2. OpenClaw Integration (Automatic Protection)
 
-4. **Enforce Policy** (New in v0.2.0):
-   ```bash
-   # Create a policy file
-   cat > policy.json <<EOF
-   {
-     "trustedKeys": ["YOUR_PUBLIC_KEY"],
-     "maxPermissions": ["fs.read"]
-   }
-   EOF
-   
-   # Verify against policy
-   sg verify my-tool.md manifest.json --policy policy.json
-   ```
+SkillGuard provides a native hook for OpenClaw that scans your `skills/` directory on startup.
 
-5. **Verify with Identity (DID)** (New in v0.3.0):
-   
-   Verify that a skill was signed by a specific identity (no manual public key needed).
-   ```bash
-   sg verify my-tool.md manifest.json --did did:web:github.com:0verL1nk
-   ```
+**Installation**
+```bash
+# Copy the hook to your managed hooks directory
+mkdir -p ~/.openclaw/hooks/skill-guard
+cp -r packages/openclaw-hook/handler.js packages/openclaw-hook/HOOK.md packages/openclaw-hook/tweetnacl.js ~/.openclaw/hooks/skill-guard/
+
+# Restart Gateway
+openclaw gateway restart
+```
+
+**How It Works**
+- Runs automatically on `gateway:startup`.
+- Scans `~/.openclaw/workspace/skills/`.
+- Checks for `manifest.json` in each skill folder.
+- **✅ Logs "Verified"** if the signature matches.
+- **❌ Logs "TAMPERED"** if the file has been modified.
+- **⚠️ Logs "UNVERIFIED"** if the manifest is missing.
 
 ## 🏗 Architecture
 
 - **`@skill-guard/protocol`**: Zod schemas for Manifests.
 - **`@skill-guard/core`**: Ed25519 signing & SHA-256 hashing logic.
 - **`@skill-guard/cli`**: The `sg` command-line interface.
+- **`@skill-guard/openclaw-hook`**: Native integration for OpenClaw Gateway.
 
 ## 🗺 Roadmap
 
-- [x] MVP: Signing & Verification
-- [x] **Policy Engine v1**: Trust list + Permission caps
+- [x] **MVP**: Signing & Verification
+- [x] **Policy Engine**: Trust list + Permission caps
 - [x] **Identity System**: Support `did:web` for automatic key resolution
+- [x] **OpenClaw Integration**: Native middleware to auto-verify skills
 - [ ] **Key Rotation**: Update keys without breaking trust chains
-- [ ] **Registry**: A decentralized lookup for Public Keys (DID-based)
-- [ ] **OpenClaw Integration**: Native middleware for OpenClaw to auto-verify skills before execution
+- [ ] **Registry**: Decentralized lookup for Public Keys
 
 ## 📄 License
 
