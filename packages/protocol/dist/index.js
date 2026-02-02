@@ -1,0 +1,28 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SkillManifestSchema = exports.PermissionScope = void 0;
+const zod_1 = require("zod");
+// Permission scopes using reverse domain notation or simple verbs
+exports.PermissionScope = zod_1.z.enum([
+    "fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"
+]);
+exports.SkillManifestSchema = zod_1.z.object({
+    schemaVersion: zod_1.z.literal("1.0.0"),
+    name: zod_1.z.string().min(1),
+    version: zod_1.z.string().regex(/^\d+\.\d+\.\d+$/),
+    description: zod_1.z.string().optional(),
+    author: zod_1.z.object({
+        name: zod_1.z.string(),
+        url: zod_1.z.string().url().optional(),
+        publicKey: zod_1.z.string() // Ed25519 Public Key (Base64)
+    }),
+    permissions: zod_1.z.array(exports.PermissionScope).default([]),
+    integrity: zod_1.z.object({
+        file: zod_1.z.string(), // e.g. "SKILL.md"
+        hash: zod_1.z.string() // sha256-hash
+    }),
+    signature: zod_1.z.object({
+        algorithm: zod_1.z.literal("ed25519"),
+        value: zod_1.z.string() // Signature of the hash (Base64)
+    })
+});
