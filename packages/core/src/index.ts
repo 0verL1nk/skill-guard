@@ -11,22 +11,63 @@ export function generateKeyPair() {
     };
 }
 
-export function hashContent(content: string): string {
+export function hashContent(content: string | Buffer): string {
     return crypto.createHash('sha256').update(content).digest('hex');
 }
 
+/**
+ * Calculates a deterministic hash for a map of files.
+ * Sorts keys to ensure order independence.
+ */
+export function hashFileMap(files: Record<string, string>): string {
+    const sortedKeys = Object.keys(files).sort();
+    const hash = crypto.createHash('sha256');
+    for (const key of sortedKeys) {
+        hash.update(`${key}:${files[key]}`); // path:hash
+    }
+    return hash.digest('hex');
+}
+
+/**
+ * Signs a manifest. 
+ * Supports both V1 (single file content) and V2 (file map).
+ * 
+ * @param partialManifest Metadata
+ * @param target Either a string (content of SKILL.md for V1) or Record<string, string> (map of path->hash for V2)
+ * @param fileNameOrRoot For V1: the filename (e.g. SKILL.md). For V2: ignored or root context (optional).
+ * @param secretKeyB64 
+ */
 export function signManifest(
     partialManifest: Omit<SkillManifest, "signature" | "integrity">,
-    fileContent: string,
-    fileName: string,
+    target: string | Record<string, string>,
+    fileNameOrRoot: string,
     secretKeyB64: string
 ): SkillManifest {
-    // 1. Calculate Hash
-    const fileHash = hashContent(fileContent);
+    let integrity: SkillManifest['integrity'];
+    let payloadHash: string;
+
+    if (typeof target === 'string') {
+        // V1: Single File
+        const fileHash = hashContent(target);
+        payloadHash = fileHash;
+        integrity = {
+            version: 1, // Optional in type, but good to be explicit internally if we change type
+            file: fileNameOrRoot,
+            hash: fileHash
+        } as any; // Cast to avoid TS union issues if strictly typed to V1|V2
+    } else {
+        // V2: File Map
+        // target is Record<path, hash>
+        // We calculate a "root hash" of all files to sign
+        payloadHash = hashFileMap(target);
+        integrity = {
+            version: 2,
+            files: target
+        };
+    }
     
-    // 2. Prepare payload to sign (hash + version + name)
-    // We sign the integrity hash to bind the content to the identity
-    const payload = `${partialManifest.name}:${partialManifest.version}:${fileHash}`;
+    // 2. Prepare payload to sign
+    const payload = `${partialManifest.name}:${partialManifest.version}:${payloadHash}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     
     // 3. Sign
@@ -36,10 +77,7 @@ export function signManifest(
 
     return {
         ...partialManifest,
-        integrity: {
-            file: fileName,
-            hash: fileHash
-        },
+        integrity,
         signature: {
             algorithm: "ed25519",
             value: signatureB64
@@ -47,20 +85,70 @@ export function signManifest(
     };
 }
 
-export function verifyManifest(manifest: SkillManifest, fileContent: string): boolean {
+/**
+ * Verifies a manifest.
+ * 
+ * @param manifest The manifest to verify
+ * @param target The content to verify against.
+ *               For V1: string (content of the single file).
+ *               For V2: Record<string, string> (map of path -> calculated_hash_of_file_on_disk).
+ */
+export function verifyManifest(manifest: SkillManifest, target: string | Record<string, string>): boolean {
     // 1. Validate Schema
     const parseResult = SkillManifestSchema.safeParse(manifest);
-    if (!parseResult.success) return false;
-
-    // 2. Verify Integrity (Hash)
-    const currentHash = hashContent(fileContent);
-    if (currentHash !== manifest.integrity.hash) {
-        console.error("Hash mismatch: Content has been tampered with.");
+    if (!parseResult.success) {
+        console.error("Schema validation failed:", parseResult.error);
         return false;
     }
 
+    let payloadHash: string;
+
+    // 2. Verify Integrity (Hash)
+    if ('files' in manifest.integrity) {
+        // V2
+        if (typeof target === 'string') {
+            console.error("Manifest is V2 (Multi-file) but verification target was a single string.");
+            return false;
+        }
+        
+        // Target is path->hash map from disk. Manifest is path->hash map from signature.
+        // We need to check if they match EXACTLY.
+        // 1. Check if all files in manifest exist in target and hashes match
+        for (const [path, hash] of Object.entries(manifest.integrity.files)) {
+            if (target[path] !== hash) {
+                console.error(`Integrity check failed for ${path}: Hash mismatch or missing.`);
+                return false;
+            }
+        }
+        // 2. Check if there are extra files in target?
+        // Strict mode: Yes. Loose mode: Maybe not?
+        // For verifyManifest (core), we verify that "What was signed is what we have".
+        // If we have *more* files than signed, technically the signed part is intact.
+        // But for security, we usually want to know if there's extra junk.
+        // Let's implement Strict Equality for now: The set of files must match.
+        // Actually, the caller usually scans the directory. If the caller scans everything, we can check keys length.
+        if (Object.keys(target).length !== Object.keys(manifest.integrity.files).length) {
+            console.error("Integrity check failed: File count mismatch (extra or missing files).");
+            return false;
+        }
+
+        payloadHash = hashFileMap(manifest.integrity.files);
+    } else {
+        // V1
+        if (typeof target !== 'string') {
+            console.error("Manifest is V1 (Single-file) but verification target was a file map.");
+            return false;
+        }
+        const currentHash = hashContent(target);
+        if (currentHash !== manifest.integrity.hash) {
+            console.error("Hash mismatch: Content has been tampered with.");
+            return false;
+        }
+        payloadHash = manifest.integrity.hash;
+    }
+
     // 3. Verify Signature
-    const payload = `${manifest.name}:${manifest.version}:${manifest.integrity.hash}`;
+    const payload = `${manifest.name}:${manifest.version}:${payloadHash}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     const signatureBytes = naclUtil.decodeBase64(manifest.signature.value);
     const publicKeyBytes = naclUtil.decodeBase64(manifest.author.publicKey);
@@ -87,17 +175,6 @@ export function checkPolicy(manifest: SkillManifest, policy: import("@overlink/s
 
 export async function resolveDID(did: string): Promise<string | null> {
     console.log(`[Core] Resolving DID: ${did}`);
-    
-    // Mock implementation for MVP
-    if (did.startsWith("did:test:")) {
-        // Return a static key for testing or extract from DID if it was a did:key
-        // For this mock, we'll assume the user provides a DID that maps to the known test key if hardcoded,
-        // or we just return a dummy key. 
-        // BETTER: For the CLI test case, we might need it to actually work.
-        // Let's return null to simulate "not found" unless it matches our test case.
-        return null;
-    }
-    
-    // TODO: Implement did:web or did:key resolution
+    // Mock implementation...
     return null; 
 }

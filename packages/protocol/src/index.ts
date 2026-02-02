@@ -16,10 +16,19 @@ export const SkillManifestSchema = z.object({
         publicKey: z.string() // Ed25519 Public Key (Base64)
     }),
     permissions: z.array(PermissionScope).default([]),
-    integrity: z.object({
-        file: z.string(), // e.g. "SKILL.md"
-        hash: z.string()  // sha256-hash
-    }),
+    integrity: z.union([
+        // V1: Single File (Legacy/Simple)
+        z.object({
+            version: z.literal(1).optional(),
+            file: z.string(),
+            hash: z.string()
+        }),
+        // V2: Directory / Multi-file
+        z.object({
+            version: z.literal(2),
+            files: z.record(z.string()) // relative_path -> sha256_hash
+        })
+    ]),
     signature: z.object({
         algorithm: z.literal("ed25519"),
         value: z.string() // Signature of the hash (Base64)

@@ -10,23 +10,60 @@ function hashContent(content) {
     return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-function verifyManifest(manifest, fileContent) {
-    // 1. Verify Integrity (Hash)
-    const currentHash = hashContent(fileContent);
-    if (currentHash !== manifest.integrity.hash) {
-        console.error("[SkillGuard] Hash mismatch: Content has been tampered with.");
-        return false;
+function hashFileMap(files) {
+    const sortedKeys = Object.keys(files).sort();
+    const hash = crypto.createHash('sha256');
+    for (const key of sortedKeys) {
+        hash.update(`${key}:${files[key]}`);
+    }
+    return hash.digest('hex');
+}
+
+function verifyManifest(manifest, target) {
+    let payloadHash;
+
+    if ('files' in manifest.integrity) {
+        // V2: Directory Map
+        if (typeof target === 'string') {
+            console.error("[SkillGuard] Manifest is V2 but target is string.");
+            return false;
+        }
+        
+        // Check strict equality of file maps
+        for (const [path, hash] of Object.entries(manifest.integrity.files)) {
+            if (target[path] !== hash) {
+                console.error(`[SkillGuard] Integrity mismatch for ${path}`);
+                return false;
+            }
+        }
+        
+        // Check for extra files
+        if (Object.keys(target).length !== Object.keys(manifest.integrity.files).length) {
+             console.error("[SkillGuard] Integrity mismatch: Extra or missing files.");
+             return false;
+        }
+
+        payloadHash = hashFileMap(manifest.integrity.files);
+    } else {
+        // V1: Single File
+        if (typeof target !== 'string') {
+             console.error("[SkillGuard] Manifest is V1 but target is directory map.");
+             return false;
+        }
+        const currentHash = hashContent(target);
+        if (currentHash !== manifest.integrity.hash) {
+            console.error("[SkillGuard] Hash mismatch: Content has been tampered with.");
+            return false;
+        }
+        payloadHash = manifest.integrity.hash;
     }
 
     // 2. Verify Signature
-    const payload = `${manifest.name}:${manifest.version}:${manifest.integrity.hash}`;
-    // decodeUTF8 replacement
+    const payload = `${manifest.name}:${manifest.version}:${payloadHash}`;
     const payloadBytes = new Uint8Array(Buffer.from(payload, 'utf8'));
-    // decodeBase64 replacement
     const signatureBytes = new Uint8Array(Buffer.from(manifest.signature.value, 'base64'));
     
     try {
-        // decodeBase64 replacement
         const publicKeyBytes = new Uint8Array(Buffer.from(manifest.author.publicKey, 'base64'));
         return nacl.sign.detached.verify(payloadBytes, signatureBytes, publicKeyBytes);
     } catch (e) {
@@ -35,16 +72,41 @@ function verifyManifest(manifest, fileContent) {
     }
 }
 
+async function scanDirectory(dir, baseDir = dir) {
+    let entries;
+    try {
+        entries = await fs.readdir(dir);
+    } catch(e) { return {}; }
+    
+    const results = {};
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry);
+        const relPath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
+        
+        // Ignores
+        if (['.git', 'node_modules', 'manifest.json', '.DS_Store'].includes(entry)) continue;
+        
+        let stat;
+        try { stat = await fs.stat(fullPath); } catch(e) { continue; }
+
+        if (stat.isDirectory()) {
+            const subResults = await scanDirectory(fullPath, baseDir);
+            Object.assign(results, subResults);
+        } else {
+            const content = await fs.readFile(fullPath); // Buffer
+            results[relPath] = hashContent(content);
+        }
+    }
+    return results;
+}
+
 // --- Hook Handler ---
 
 const handler = async (event) => {
-  // Run on gateway startup to scan initial skills
   if (event.type === 'gateway' && event.action === 'startup') {
     await runScan(event);
     return;
   }
-
-  // Also run on agent bootstrap (when workspace is initialized)
   if (event.type === 'agent' && event.action === 'bootstrap') {
     await runScan(event);
     return;
@@ -53,15 +115,10 @@ const handler = async (event) => {
 
 async function runScan(event) {
   console.log('[SkillGuard] Hook triggered. Scanning skills...');
-
   const workspaceDir = event.context?.workspaceDir;
-  if (!workspaceDir) {
-    // Fallback or skip
-    return;
-  }
+  if (!workspaceDir) return;
 
   const skillsDir = path.join(workspaceDir, 'skills');
-  
   try {
     await scanAndVerifySkills(skillsDir);
   } catch (err) {
@@ -71,23 +128,13 @@ async function runScan(event) {
 
 async function scanAndVerifySkills(dir) {
   let entries;
-  try {
-    entries = await fs.readdir(dir);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      return;
-    }
-    throw err;
-  }
+  try { entries = await fs.readdir(dir); } 
+  catch (err) { return; }
 
   for (const entry of entries) {
     const skillPath = path.join(dir, entry);
     let stat;
-    try {
-        stat = await fs.stat(skillPath);
-    } catch {
-        continue;
-    }
+    try { stat = await fs.stat(skillPath); } catch { continue; }
     
     if (stat.isDirectory()) {
       await checkSkill(skillPath, entry);
@@ -96,17 +143,7 @@ async function scanAndVerifySkills(dir) {
 }
 
 async function checkSkill(skillDir, skillName) {
-  const skillMdPath = path.join(skillDir, 'SKILL.md');
   const manifestPath = path.join(skillDir, 'manifest.json');
-
-  // Check if SKILL.md exists
-  try {
-    await fs.access(skillMdPath);
-  } catch {
-    return;
-  }
-
-  // Check if manifest.json exists
   let hasManifest = false;
   try {
     await fs.access(manifestPath);
@@ -121,11 +158,26 @@ async function checkSkill(skillDir, skillName) {
   }
 
   try {
-    const skillContent = await fs.readFile(skillMdPath, 'utf-8');
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
     const manifestJson = JSON.parse(manifestContent);
     
-    const isValid = verifyManifest(manifestJson, skillContent);
+    let target;
+    if ('files' in manifestJson.integrity) {
+        // V2: Scan Directory
+        target = await scanDirectory(skillDir);
+    } else {
+        // V1: Single File (Usually SKILL.md)
+        const skillFile = manifestJson.integrity.file || 'SKILL.md';
+        const skillFilePath = path.join(skillDir, skillFile);
+        try {
+            target = await fs.readFile(skillFilePath, 'utf-8');
+        } catch(e) {
+            console.error(`[SkillGuard] ❌ BROKEN SKILL: "${skillName}" (missing ${skillFile})`);
+            return;
+        }
+    }
+
+    const isValid = verifyManifest(manifestJson, target);
     
     if (isValid) {
       console.log(`[SkillGuard] ✅ Verified skill: "${skillName}"`);
