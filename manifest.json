@@ -1,21 +1,20 @@
 {
   "schemaVersion": "1.0.0",
-  "name": "super-tool",
+  "name": "demo-skill.md",
   "version": "1.0.0",
   "author": {
     "name": "unknown",
-    "publicKey": "YN5g4Y8PfWQxG/+xSjxWIDjVJFwNgsCvRA2+k/NY1HI="
+    "publicKey": "1ZZgI2N8nG2HvvqIscbXNd4zSxZ4qm7pL7LzakE8Vq4="
   },
   "permissions": [
-    "fs.read",
-    "net.fetch"
+    "fs.read"
   ],
   "integrity": {
-    "file": "super-tool.md",
-    "hash": "3624b0005092a2207f645eb26bbbd577177bf6888961bf2595002c4f14de246a"
+    "file": "demo-skill.md",
+    "hash": "a0b82b41bbe027bdc5536dcdc1bcb4b92ebed76033fba8cc0533d0d0e5c8958d"
   },
   "signature": {
     "algorithm": "ed25519",
-    "value": "X/jBpMG5Yf7jfig4uB3wBkgWrMuNwbKoQamYT7UGb27PYgKpu2Lux0vb8OBY33jnrYejSq20uFzlF3Okqq1dAg=="
+    "value": "swZiY74HN9L1awYkNSTqMLLcBveHSoUEsybzRTzJbV9sw8HEuYf1BAX0rXL6y9+fwQqE/gYBQaGSmhsZO5lUAg=="
   }
 }

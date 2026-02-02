@@ -44,6 +44,20 @@ npm link --workspace packages/cli
    sg verify my-tool.md manifest.json
    ```
 
+4. **Enforce Policy** (New in v0.2.0):
+   ```bash
+   # Create a policy file
+   cat > policy.json <<EOF
+   {
+     "trustedKeys": ["YOUR_PUBLIC_KEY"],
+     "maxPermissions": ["fs.read"]
+   }
+   EOF
+   
+   # Verify against policy
+   sg verify my-tool.md manifest.json --policy policy.json
+   ```
+
 ## 🏗 Architecture
 
 - **`@skill-guard/protocol`**: Zod schemas for Manifests.
@@ -53,9 +67,10 @@ npm link --workspace packages/cli
 ## 🗺 Roadmap
 
 - [x] MVP: Signing & Verification
-- [ ] **Policy Engine**: Allow agents to define "Trusted Keys" (e.g., only run skills signed by `0verL1nk`).
-- [ ] **Registry**: A decentralized lookup for Public Keys (DID-based).
-- [ ] **OpenClaw Integration**: Native middleware for OpenClaw to auto-verify skills before execution.
+- [x] **Policy Engine v1**: Trust list + Permission caps
+- [ ] **Key Rotation**: Update keys without breaking trust chains
+- [ ] **Registry**: A decentralized lookup for Public Keys (DID-based)
+- [ ] **OpenClaw Integration**: Native middleware for OpenClaw to auto-verify skills before execution
 
 ## 📄 License
 

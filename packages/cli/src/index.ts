@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import * as fs from "fs-extra";
 import * as path from "path";
-import { generateKeyPair, signManifest, verifyManifest } from "@skill-guard/core";
+import { generateKeyPair, signManifest, verifyManifest, checkPolicy } from "@skill-guard/core";
 
 const program = new Command();
 
@@ -58,22 +58,35 @@ program.command("sign")
   });
 
 program.command("verify")
-  .description("Verify a skill against its manifest")
+  .description("Verify a skill against its manifest and optional policy")
   .argument("<file>", "Skill file")
   .argument("<manifest>", "Manifest file")
-  .action(async (file, manifestPath) => {
+  .option("--policy <file>", "Policy file (JSON) to enforce")
+  .action(async (file, manifestPath, options) => {
     try {
         const content = await fs.readFile(file, "utf-8");
         const manifest = await fs.readJson(manifestPath);
         
+        // 1. Verify Integrity & Signature
         const valid = verifyManifest(manifest, content);
-        if (valid) {
-            console.log("✅ VERIFIED: Skill integrity and signature are valid.");
-            console.log("Permissions:", manifest.permissions);
-        } else {
+        if (!valid) {
             console.error("❌ FAILED: Invalid signature or integrity check.");
             process.exit(1);
         }
+
+        // 2. Verify Policy (if provided)
+        if (options.policy) {
+            const policy = await fs.readJson(options.policy);
+            const policyResult = checkPolicy(manifest, policy);
+            if (!policyResult.allowed) {
+                console.error(`❌ POLICY DENIED: ${policyResult.reason}`);
+                process.exit(1);
+            }
+            console.log("✅ POLICY PASSED");
+        }
+
+        console.log("✅ VERIFIED: Skill is safe to run.");
+        console.log("Permissions:", manifest.permissions);
     } catch (e: any) {
         console.error("Error:", e.message);
         process.exit(1);

@@ -1,28 +1,46 @@
+#!/bin/bash
+set -e
 
-# 1. Generate Keys
-node packages/cli/dist/index.js keygen --out keys
+echo "🔑 Step 1: Generating key pair..."
+node packages/cli/dist/index.js keygen --out ./keys
 
-# 2. Create a dummy skill
-echo "# Super Skill" > super-tool.md
-echo "This is a secure skill." >> super-tool.md
+echo ""
+echo "📝 Step 2: Creating demo skill..."
+cat > demo-skill.md <<EOF
+# Demo Skill
+This is a sample skill for testing SkillGuard.
+EOF
 
-# 3. Sign it
-# We simulate a "dev" signing it
-node packages/cli/dist/index.js sign super-tool.md \
-  --key keys/private.key \
-  --name "super-tool" \
-  --ver "1.0.0" \
-  --perms "fs.read" "net.fetch"
+echo ""
+echo "✍️ Step 3: Signing demo skill..."
+node packages/cli/dist/index.js sign demo-skill.md --key ./keys/private.key --perms "fs.read" "net.fetch"
 
-echo "\n--- Generated Manifest ---"
-cat manifest.json
-echo "\n------------------------"
+echo ""
+echo "✅ Step 4: Verifying signature (no policy)..."
+node packages/cli/dist/index.js verify demo-skill.md manifest.json
 
-# 4. Verify (Should Pass)
-echo "\n[Test 1] Verifying original..."
-node packages/cli/dist/index.js verify super-tool.md manifest.json
+echo ""
+echo "🛡️ Step 5: Creating strict policy (only allow fs.read)..."
+PUBLIC_KEY=$(cat ./keys/public.key)
+cat > strict-policy.json <<EOF
+{
+  "trustedKeys": ["$PUBLIC_KEY"],
+  "maxPermissions": ["fs.read"],
+  "enforceVersionMatch": false
+}
+EOF
 
-# 5. Tamper (Should Fail)
-echo "\n[Test 2] Tampering with skill..."
-echo "HACKED CODE" >> super-tool.md
-node packages/cli/dist/index.js verify super-tool.md manifest.json || echo "✅ Tamper detected!"
+echo ""
+echo "❌ Step 6: Verifying with strict policy (should FAIL - skill has net.fetch)..."
+node packages/cli/dist/index.js verify demo-skill.md manifest.json --policy strict-policy.json || echo "Expected failure: Skill requests forbidden permission."
+
+echo ""
+echo "✅ Step 7: Re-signing with only fs.read..."
+node packages/cli/dist/index.js sign demo-skill.md --key ./keys/private.key --perms "fs.read"
+
+echo ""
+echo "✅ Step 8: Verifying with strict policy (should PASS)..."
+node packages/cli/dist/index.js verify demo-skill.md manifest.json --policy strict-policy.json
+
+echo ""
+echo "✨ Demo complete! Policy enforcement works."
