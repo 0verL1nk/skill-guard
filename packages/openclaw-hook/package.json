@@ -1,0 +1,20 @@
+{
+  "name": "@skill-guard/openclaw-hook",
+  "version": "0.1.0",
+  "description": "OpenClaw hook for verifying skills with SkillGuard",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w"
+  },
+  "dependencies": {
+    "@skill-guard/core": "*",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.2"
+  }
+}

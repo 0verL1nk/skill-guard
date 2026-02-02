@@ -84,3 +84,20 @@ export function checkPolicy(manifest: SkillManifest, policy: import("@skill-guar
 
     return { allowed: true };
 }
+
+export async function resolveDID(did: string): Promise<string | null> {
+    console.log(`[Core] Resolving DID: ${did}`);
+    
+    // Mock implementation for MVP
+    if (did.startsWith("did:test:")) {
+        // Return a static key for testing or extract from DID if it was a did:key
+        // For this mock, we'll assume the user provides a DID that maps to the known test key if hardcoded,
+        // or we just return a dummy key. 
+        // BETTER: For the CLI test case, we might need it to actually work.
+        // Let's return null to simulate "not found" unless it matches our test case.
+        return null;
+    }
+    
+    // TODO: Implement did:web or did:key resolution
+    return null; 
+}
