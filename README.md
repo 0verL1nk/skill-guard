@@ -58,6 +58,13 @@ npm link --workspace packages/cli
    sg verify my-tool.md manifest.json --policy policy.json
    ```
 
+5. **Verify with Identity (DID)** (New in v0.3.0):
+   
+   Verify that a skill was signed by a specific identity (no manual public key needed).
+   ```bash
+   sg verify my-tool.md manifest.json --did did:web:github.com:0verL1nk
+   ```
+
 ## 🏗 Architecture
 
 - **`@skill-guard/protocol`**: Zod schemas for Manifests.
@@ -68,6 +75,7 @@ npm link --workspace packages/cli
 
 - [x] MVP: Signing & Verification
 - [x] **Policy Engine v1**: Trust list + Permission caps
+- [x] **Identity System**: Support `did:web` for automatic key resolution
 - [ ] **Key Rotation**: Update keys without breaking trust chains
 - [ ] **Registry**: A decentralized lookup for Public Keys (DID-based)
 - [ ] **OpenClaw Integration**: Native middleware for OpenClaw to auto-verify skills before execution

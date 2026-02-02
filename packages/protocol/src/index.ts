@@ -36,3 +36,16 @@ export const PolicySchema = z.object({
 });
 
 export type Policy = z.infer<typeof PolicySchema>;
+
+// DID Resolution Response
+export const DIDDocumentSchema = z.object({
+    id: z.string(),
+    verificationMethod: z.array(z.object({
+        id: z.string(),
+        type: z.literal("Ed25519VerificationKey2020"),
+        controller: z.string(),
+        publicKeyMultibase: z.string() // The public key
+    }))
+});
+
+export type DIDDocument = z.infer<typeof DIDDocumentSchema>;

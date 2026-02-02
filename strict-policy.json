@@ -1,0 +1,5 @@
+{
+  "trustedKeys": ["1ZZgI2N8nG2HvvqIscbXNd4zSxZ4qm7pL7LzakE8Vq4="],
+  "maxPermissions": ["fs.read"],
+  "enforceVersionMatch": false
+}
