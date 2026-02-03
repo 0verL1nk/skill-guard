@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { verifyManifest } from '@overlink/sg-core';
+import { verifyManifest, hashContent } from '@overlink/sg-core';
 
 // Minimal type definition for OpenClaw Hook
 type HookEvent = {
@@ -46,6 +46,28 @@ async function runScan(event: HookEvent) {
   }
 }
 
+async function scanDirectory(dir: string, baseDir: string = dir): Promise<Record<string, string>> {
+  const entries = await fs.readdir(dir);
+  const results: Record<string, string> = {};
+  for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      const relPath = path.relative(baseDir, fullPath).replace(/\\/g, '/'); // Normalize path
+      
+      // Ignores
+      if (['.git', 'node_modules', 'manifest.json', '.DS_Store'].includes(entry)) continue;
+      
+      const stat = await fs.stat(fullPath);
+      if (stat.isDirectory()) {
+          const subResults = await scanDirectory(fullPath, baseDir);
+          Object.assign(results, subResults);
+      } else {
+          const content = await fs.readFile(fullPath);
+          results[relPath] = hashContent(content);
+      }
+  }
+  return results;
+}
+
 async function scanAndVerifySkills(dir: string) {
   let entries: string[];
   try {
@@ -74,39 +96,40 @@ async function scanAndVerifySkills(dir: string) {
 }
 
 async function checkSkill(skillDir: string, skillName: string) {
-  const skillMdPath = path.join(skillDir, 'SKILL.md');
   const manifestPath = path.join(skillDir, 'manifest.json');
 
-  // Check if SKILL.md exists
-  try {
-    await fs.access(skillMdPath);
-  } catch {
-    // No SKILL.md, skip
-    return;
-  }
-
   // Check if manifest.json exists
-  let hasManifest = false;
   try {
     await fs.access(manifestPath);
-    hasManifest = true;
   } catch {
-    hasManifest = false;
-  }
-
-  if (!hasManifest) {
+    // If no manifest, skip quietly or warn based on policy (default warn)
     console.warn(`[SkillGuard] ⚠️  UNVERIFIED SKILL: "${skillName}" (missing manifest.json)`);
     return;
   }
 
   try {
-    // Read files
-    const skillContent = await fs.readFile(skillMdPath, 'utf-8');
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
     const manifestJson = JSON.parse(manifestContent);
     
+    let target: string | Record<string, string>;
+
+    if ('files' in manifestJson.integrity) {
+        // V2: Directory Integrity
+        // Scan the directory to get current state
+        target = await scanDirectory(skillDir);
+    } else {
+        // V1: Single File (SKILL.md)
+        const skillMdPath = path.join(skillDir, 'SKILL.md');
+        try {
+            target = await fs.readFile(skillMdPath, 'utf-8');
+        } catch {
+            console.error(`[SkillGuard] ❌ BROKEN SKILL: "${skillName}" (V1 manifest requires SKILL.md)`);
+            return;
+        }
+    }
+
     // Verify
-    const isValid = verifyManifest(manifestJson, skillContent);
+    const isValid = verifyManifest(manifestJson, target);
     
     if (isValid) {
       console.log(`[SkillGuard] ✅ Verified skill: "${skillName}"`);

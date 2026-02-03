@@ -38,7 +38,8 @@ export type SkillManifest = z.infer<typeof SkillManifestSchema>;
 // Policy Schema: Defines what the runtime accepts
 export const PolicySchema = z.object({
     trustedKeys: z.array(z.string()), // List of accepted Public Keys (Base64)
-    maxPermissions: z.array(PermissionScope).optional(), // If set, skill cannot have permissions outside this list
+    maxPermissions: z.array(PermissionScope).optional(), // Global cap: If set, no skill can have permissions outside this list
+    scopedPermissions: z.record(z.array(PermissionScope)).optional(), // Map of PublicKey -> Allowed Permissions
     enforceVersionMatch: z.boolean().default(false) // Future: check against a registry
 });
 

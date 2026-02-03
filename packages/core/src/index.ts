@@ -157,26 +157,39 @@ export function verifyManifest(manifest: SkillManifest, target: string | Record<
 }
 
 export function checkPolicy(manifest: SkillManifest, policy: import("@overlink/sg-protocol").Policy): { allowed: boolean; reason?: string } {
+    const authorKey = manifest.author.publicKey;
+
     // 1. Check Trust (Public Key)
-    if (!policy.trustedKeys.includes(manifest.author.publicKey)) {
+    if (!policy.trustedKeys.includes(authorKey)) {
         return { allowed: false, reason: "Author's public key is not trusted by policy." };
     }
 
-    // 2. Check Permissions (Wildcard Support)
-    if (policy.maxPermissions) {
-        const forbidden = manifest.permissions.filter(requested => {
-            // Check if 'requested' matches any pattern in 'maxPermissions'
-            return !policy.maxPermissions!.some(allowed => {
+    const checkPerms = (requested: string[], allowedList: string[]) => {
+        return requested.filter(req => {
+            return !allowedList.some(allowed => {
                 if (allowed.endsWith('*')) {
                     const prefix = allowed.slice(0, -1);
-                    return requested.startsWith(prefix);
+                    return req.startsWith(prefix);
                 }
-                return requested === allowed;
+                return req === allowed;
             });
         });
+    };
 
-        if (forbidden.length > 0) {
-            return { allowed: false, reason: `Requesting forbidden permissions: ${forbidden.join(", ")}` };
+    // 2. Check Scoped Permissions (Specific to this Key)
+    if (policy.scopedPermissions && policy.scopedPermissions[authorKey]) {
+        const allowedScoped = policy.scopedPermissions[authorKey];
+        const forbiddenScoped = checkPerms(manifest.permissions, allowedScoped);
+        if (forbiddenScoped.length > 0) {
+             return { allowed: false, reason: `Author restricted by Scoped Policy. Forbidden: ${forbiddenScoped.join(", ")}` };
+        }
+    }
+
+    // 3. Check Global Permissions (Wildcard Support)
+    if (policy.maxPermissions) {
+        const forbiddenGlobal = checkPerms(manifest.permissions, policy.maxPermissions);
+        if (forbiddenGlobal.length > 0) {
+            return { allowed: false, reason: `Requesting forbidden global permissions: ${forbiddenGlobal.join(", ")}` };
         }
     }
 
