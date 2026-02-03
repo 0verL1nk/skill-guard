@@ -207,4 +207,50 @@ program.command("verify")
         process.exit(1);
     }
 });
+program.command("install-hook")
+    .description("Install the OpenClaw SkillGuard Hook automatically")
+    .action(async () => {
+    try {
+        const homeDir = process.env.HOME || process.env.USERPROFILE;
+        if (!homeDir)
+            throw new Error("Could not determine home directory");
+        const hooksDir = path.join(homeDir, ".openclaw", "hooks", "skill-guard");
+        await fs.ensureDir(hooksDir);
+        console.log("📥 Downloading latest hook from npm...");
+        // Fetch from jsDelivr to avoid local dependency issues
+        // We assume the package publishes the bundled 'dist/handler.js'
+        const baseUrl = "https://cdn.jsdelivr.net/npm/@overlink/sg-openclaw-hook@latest/dist";
+        const files = ["handler.js"];
+        for (const file of files) {
+            const url = `${baseUrl}/${file}`;
+            console.log(`   Fetching ${url}...`);
+            // Use global fetch (Node 18+)
+            const response = await fetch(url);
+            if (!response.ok)
+                throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+            const text = await response.text();
+            await fs.writeFile(path.join(hooksDir, file), text);
+            console.log(`   - Installed ${file}`);
+        }
+        // Create HOOK.md
+        const hookMd = `
+---
+name: skill-guard
+description: Verifies the integrity and signature of skills on startup.
+---
+# SkillGuard Hook
+
+Automatically verifies skills against their manifest.json on startup.
+`;
+        await fs.writeFile(path.join(hooksDir, "HOOK.md"), hookMd.trim());
+        console.log("   - Installed HOOK.md");
+        console.log("\n✅ SkillGuard Hook installed successfully!");
+        console.log("🔄 Please restart your OpenClaw Gateway to apply changes:");
+        console.log("   openclaw gateway restart");
+    }
+    catch (e) {
+        console.error("❌ Installation failed:", e.message);
+        process.exit(1);
+    }
+});
 program.parse();

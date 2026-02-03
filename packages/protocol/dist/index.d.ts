@@ -1,5 +1,5 @@
 import { z } from "zod";
-export declare const PermissionScope: z.ZodEnum<["fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"]>;
+export declare const PermissionScope: z.ZodString;
 export declare const SkillManifestSchema: z.ZodObject<{
     schemaVersion: z.ZodLiteral<"1.0.0">;
     name: z.ZodString;
@@ -18,7 +18,7 @@ export declare const SkillManifestSchema: z.ZodObject<{
         publicKey: string;
         url?: string | undefined;
     }>;
-    permissions: z.ZodDefault<z.ZodArray<z.ZodEnum<["fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"]>, "many">>;
+    permissions: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     integrity: z.ZodUnion<[z.ZodObject<{
         version: z.ZodOptional<z.ZodLiteral<1>>;
         file: z.ZodString;
@@ -60,7 +60,7 @@ export declare const SkillManifestSchema: z.ZodObject<{
         publicKey: string;
         url?: string | undefined;
     };
-    permissions: ("fs.read" | "fs.write" | "net.fetch" | "shell.exec" | "env.read")[];
+    permissions: string[];
     integrity: {
         file: string;
         hash: string;
@@ -96,20 +96,20 @@ export declare const SkillManifestSchema: z.ZodObject<{
         algorithm: "ed25519";
     };
     description?: string | undefined;
-    permissions?: ("fs.read" | "fs.write" | "net.fetch" | "shell.exec" | "env.read")[] | undefined;
+    permissions?: string[] | undefined;
 }>;
 export type SkillManifest = z.infer<typeof SkillManifestSchema>;
 export declare const PolicySchema: z.ZodObject<{
     trustedKeys: z.ZodArray<z.ZodString, "many">;
-    maxPermissions: z.ZodOptional<z.ZodArray<z.ZodEnum<["fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"]>, "many">>;
+    maxPermissions: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     enforceVersionMatch: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     trustedKeys: string[];
     enforceVersionMatch: boolean;
-    maxPermissions?: ("fs.read" | "fs.write" | "net.fetch" | "shell.exec" | "env.read")[] | undefined;
+    maxPermissions?: string[] | undefined;
 }, {
     trustedKeys: string[];
-    maxPermissions?: ("fs.read" | "fs.write" | "net.fetch" | "shell.exec" | "env.read")[] | undefined;
+    maxPermissions?: string[] | undefined;
     enforceVersionMatch?: boolean | undefined;
 }>;
 export type Policy = z.infer<typeof PolicySchema>;

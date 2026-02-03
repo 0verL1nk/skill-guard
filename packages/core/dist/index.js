@@ -184,9 +184,18 @@ function checkPolicy(manifest, policy) {
     if (!policy.trustedKeys.includes(manifest.author.publicKey)) {
         return { allowed: false, reason: "Author's public key is not trusted by policy." };
     }
-    // 2. Check Permissions (Max Cap)
+    // 2. Check Permissions (Wildcard Support)
     if (policy.maxPermissions) {
-        const forbidden = manifest.permissions.filter(p => !policy.maxPermissions.includes(p));
+        const forbidden = manifest.permissions.filter(requested => {
+            // Check if 'requested' matches any pattern in 'maxPermissions'
+            return !policy.maxPermissions.some(allowed => {
+                if (allowed.endsWith('*')) {
+                    const prefix = allowed.slice(0, -1);
+                    return requested.startsWith(prefix);
+                }
+                return requested === allowed;
+            });
+        });
         if (forbidden.length > 0) {
             return { allowed: false, reason: `Requesting forbidden permissions: ${forbidden.join(", ")}` };
         }

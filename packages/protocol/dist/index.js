@@ -3,9 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DIDDocumentSchema = exports.PolicySchema = exports.SkillManifestSchema = exports.PermissionScope = void 0;
 const zod_1 = require("zod");
 // Permission scopes using reverse domain notation or simple verbs
-exports.PermissionScope = zod_1.z.enum([
-    "fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"
-]);
+exports.PermissionScope = zod_1.z.string();
 exports.SkillManifestSchema = zod_1.z.object({
     schemaVersion: zod_1.z.literal("1.0.0"),
     name: zod_1.z.string().min(1),

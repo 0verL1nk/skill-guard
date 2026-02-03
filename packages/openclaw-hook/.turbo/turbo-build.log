@@ -1,4 +1,5 @@
 
-> @overlink/sg-openclaw-hook@0.1.0 build
-> tsc
+> @overlink/sg-openclaw-hook@0.3.0 build
+> tsc && node build.js
 
+✅ Build successful: dist/handler.js

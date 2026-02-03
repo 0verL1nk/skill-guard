@@ -200,12 +200,14 @@ program.command("install-hook")
           console.log("📥 Downloading latest hook from npm...");
           
           // Fetch from jsDelivr to avoid local dependency issues
-          // We fetch the individual files we need
-          const baseUrl = "https://cdn.jsdelivr.net/npm/@overlink/sg-openclaw-hook@latest";
-          const files = ["handler.js", "tweetnacl.js"]; // We bundled tweetnacl in the hook package for this reason
+          // We assume the package publishes the bundled 'dist/handler.js'
+          const baseUrl = "https://cdn.jsdelivr.net/npm/@overlink/sg-openclaw-hook@latest/dist";
+          const files = ["handler.js"];
           
           for (const file of files) {
               const url = `${baseUrl}/${file}`;
+              console.log(`   Fetching ${url}...`);
+              // Use global fetch (Node 18+)
               const response = await fetch(url);
               if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
               const text = await response.text();

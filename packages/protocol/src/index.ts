@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 // Permission scopes using reverse domain notation or simple verbs
-export const PermissionScope = z.enum([
-    "fs.read", "fs.write", "net.fetch", "shell.exec", "env.read"
-]);
+export const PermissionScope = z.string();
 
 export const SkillManifestSchema = z.object({
     schemaVersion: z.literal("1.0.0"),
