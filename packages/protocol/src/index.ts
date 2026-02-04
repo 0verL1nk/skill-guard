@@ -14,6 +14,7 @@ export const SkillManifestSchema = z.object({
         publicKey: z.string() // Ed25519 Public Key (Base64)
     }),
     permissions: z.array(PermissionScope).default([]),
+    expiresAt: z.string().datetime().optional(), // ISO timestamp
     integrity: z.union([
         // V1: Single File (Legacy/Simple)
         z.object({

@@ -67,7 +67,8 @@ export function signManifest(
     }
     
     // 2. Prepare payload to sign
-    const payload = `${partialManifest.name}:${partialManifest.version}:${payloadHash}`;
+    // Format: name:version:hash:expiresAt
+    const payload = `${partialManifest.name}:${partialManifest.version}:${payloadHash}:${(partialManifest as any).expiresAt || ''}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     
     // 3. Sign
@@ -147,8 +148,17 @@ export function verifyManifest(manifest: SkillManifest, target: string | Record<
         payloadHash = manifest.integrity.hash;
     }
 
-    // 3. Verify Signature
-    const payload = `${manifest.name}:${manifest.version}:${payloadHash}`;
+    // 3. Verify Expiry
+    if (manifest.expiresAt) {
+        const expiry = new Date(manifest.expiresAt);
+        if (expiry < new Date()) {
+            console.error(`Manifest expired at ${manifest.expiresAt}`);
+            return false;
+        }
+    }
+
+    // 4. Verify Signature
+    const payload = `${manifest.name}:${manifest.version}:${payloadHash}:${manifest.expiresAt || ''}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     const signatureBytes = naclUtil.decodeBase64(manifest.signature.value);
     const publicKeyBytes = naclUtil.decodeBase64(manifest.author.publicKey);
