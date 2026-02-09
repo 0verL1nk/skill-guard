@@ -67,8 +67,9 @@ export function signManifest(
     }
     
     // 2. Prepare payload to sign
-    // Format: name:version:hash:expiresAt
-    const payload = `${partialManifest.name}:${partialManifest.version}:${payloadHash}:${(partialManifest as any).expiresAt || ''}`;
+    const timestamp = new Date().toISOString();
+    // Format: name:version:hash:expiresAt:timestamp
+    const payload = `${partialManifest.name}:${partialManifest.version}:${payloadHash}:${(partialManifest as any).expiresAt || ''}:${timestamp}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     
     // 3. Sign
@@ -81,9 +82,10 @@ export function signManifest(
         integrity,
         signature: {
             algorithm: "ed25519",
-            value: signatureB64
+            value: signatureB64,
+            timestamp
         }
-    };
+    } as SkillManifest;
 }
 
 /**
@@ -158,7 +160,7 @@ export function verifyManifest(manifest: SkillManifest, target: string | Record<
     }
 
     // 4. Verify Signature
-    const payload = `${manifest.name}:${manifest.version}:${payloadHash}:${manifest.expiresAt || ''}`;
+    const payload = `${manifest.name}:${manifest.version}:${payloadHash}:${manifest.expiresAt || ''}:${manifest.signature.timestamp || ''}`;
     const payloadBytes = naclUtil.decodeUTF8(payload);
     const signatureBytes = naclUtil.decodeBase64(manifest.signature.value);
     const publicKeyBytes = naclUtil.decodeBase64(manifest.author.publicKey);

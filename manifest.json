@@ -4,17 +4,19 @@
   "version": "1.0.0",
   "author": {
     "name": "unknown",
-    "publicKey": "1ZZgI2N8nG2HvvqIscbXNd4zSxZ4qm7pL7LzakE8Vq4="
+    "publicKey": "A9Ybk1uH7veFtMjZ5hpFoiKUZDdk7HNdw96T2q+5VT0="
   },
   "permissions": [
     "fs.read"
   ],
   "integrity": {
+    "version": 1,
     "file": "demo-skill.md",
     "hash": "a0b82b41bbe027bdc5536dcdc1bcb4b92ebed76033fba8cc0533d0d0e5c8958d"
   },
   "signature": {
     "algorithm": "ed25519",
-    "value": "swZiY74HN9L1awYkNSTqMLLcBveHSoUEsybzRTzJbV9sw8HEuYf1BAX0rXL6y9+fwQqE/gYBQaGSmhsZO5lUAg=="
+    "value": "DhtznXr8IUnZjI883AhPAUgzLJ59/d94SEUtc++kWXT+aTDDIlTDlZWwIEjqRPfWHvOsSlrNnPWLe1eSbJBhDg==",
+    "timestamp": "2026-02-09T02:18:39.226Z"
   }
 }

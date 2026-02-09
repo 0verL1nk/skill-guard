@@ -30,7 +30,8 @@ export const SkillManifestSchema = z.object({
     ]),
     signature: z.object({
         algorithm: z.literal("ed25519"),
-        value: z.string() // Signature of the hash (Base64)
+        value: z.string(), // Signature of the hash (Base64)
+        timestamp: z.string().datetime().optional() // ISO timestamp of signing
     })
 });
 
